@@ -1,0 +1,141 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mongodb"
+    url      = env("DATABASE_URL")
+}
+
+model users {
+    id             String          @id @default(auto()) @map("_id") @db.ObjectId
+    username       String          @unique
+    email          String          @unique
+    password       String
+    last_active    DateTime?
+    create_at      DateTime        @default(now())
+    user_info      user_info?
+    user_auth      user_auth?
+    calling_status calling_status?
+    contact_list   contact_list?
+    contact        contact[]
+    group_member   group_member[]
+}
+
+model user_info {
+    id         String  @id @default(auto()) @map("_id") @db.ObjectId
+    first_name String?
+    last_name  String?
+    profile    String?
+    bio        String?
+    user_id    String  @unique @db.ObjectId
+    user       users   @relation(fields: [user_id], references: [id])
+}
+
+model user_auth {
+    id           String  @id @default(auto()) @map("_id") @db.ObjectId
+    token        String? @unique
+    socket_token String? @unique
+    verify_code  Int?
+    user_id      String  @unique @db.ObjectId
+    user         users   @relation(fields: [user_id], references: [id])
+}
+
+model contact_list {
+    id      String    @id @default(auto()) @map("_id") @db.ObjectId
+    user_id String    @unique @db.ObjectId
+    user    users     @relation(fields: [user_id], references: [id])
+    contact contact[]
+}
+
+model contact {
+    id              String        @id @default(auto()) @map("_id") @db.ObjectId
+    first_name      String
+    last_name       String?
+    archive         Boolean       @default(false)
+    block           Boolean       @default(false)
+    user_id         String        @unique @db.ObjectId
+    user            users         @relation(fields: [user_id], references: [id])
+    contact_list    contact_list? @relation(fields: [contact_list_id], references: [id])
+    contact_list_id String?       @db.ObjectId
+    unsaved         Boolean       @default(false)
+    last_info       last_info?
+    message         message[]     @relation(fields: [message_id], references: [id])
+    message_id      String[]      @db.ObjectId
+}
+
+model last_info {
+    id         String   @id @default(auto()) @map("_id") @db.ObjectId
+    msg        String
+    time       DateTime @default(now())
+    contact_id String?  @unique @db.ObjectId
+    unread     Int      @default(0)
+    contact    contact? @relation(fields: [contact_id], references: [id])
+    group_id   String?  @unique @db.ObjectId
+    group      group?   @relation(fields: [group_id], references: [id])
+}
+
+model group {
+    id           String         @id @default(auto()) @map("_id") @db.ObjectId
+    group_code   String
+    name         String
+    bio          String?
+    last_info    last_info?
+    group_member group_member[]
+    message      message[]      @relation(fields: [message_id], references: [id])
+    message_id   String[]       @db.ObjectId
+}
+
+model group_member {
+    id       String  @id @default(auto()) @map("_id") @db.ObjectId
+    role     Int     @default(13000)
+    user_id  String  @unique @db.ObjectId
+    unread   Int     @default(0)
+    user     users   @relation(fields: [user_id], references: [id])
+    group    group?  @relation(fields: [group_id], references: [id])
+    group_id String? @db.ObjectId
+}
+
+model message {
+    id          String    @id @default(auto()) @map("_id") @db.ObjectId
+    msg         String
+    time        DateTime  @default(now())
+    forward     Boolean   @default(false)
+    info_msg    info_msg?
+    src         String?
+    del         Boolean   @default(false)
+    type        String    @default("idle")
+    pull_msg_id String    @unique @db.ObjectId
+    pull_msg    pull_msg  @relation(fields: [pull_msg_id], references: [id])
+    contact     contact[] @relation(fields: [contact_id], references: [id])
+    contact_id  String[]  @db.ObjectId
+    group       group[]   @relation(fields: [group_id], references: [id])
+    group_id    String[]  @db.ObjectId
+}
+
+model info_msg {
+    id          String  @id @default(auto()) @map("_id") @db.ObjectId
+    to          String
+    from        String
+    sender_read Boolean @default(true)
+    respon_read Boolean @default(false)
+    type        String  @default("private")
+    type_src    String? @default("none")
+    message_id  String  @unique @db.ObjectId
+    message     message @relation(fields: [message_id], references: [id])
+}
+
+model calling_status {
+    id        String  @id @default(auto()) @map("_id") @db.ObjectId
+    status    Boolean @default(false)
+    current   String?
+    room_code String?
+    user_id   String  @unique @db.ObjectId
+    users     users   @relation(fields: [user_id], references: [id])
+}
+
+model pull_msg {
+    id     String   @id @default(auto()) @map("_id") @db.ObjectId
+    status Boolean  @default(false)
+    msg    message?
+}
